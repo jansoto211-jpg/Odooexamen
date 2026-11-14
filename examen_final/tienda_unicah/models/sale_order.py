@@ -1,5 +1,5 @@
-from odoo import api, fields, models # type: ignore[import-not-found]
-from odoo.exceptions import UserError # type: ignore[import-not-found]
+from odoo import api, fields, models 
+from odoo.exceptions import UserError 
 LIMITE_UNIDADES_ESTUDIANTE = 10
 
 class SaleOrder(models.Model):
@@ -24,6 +24,42 @@ class SaleOrder(models.Model):
         readonly=True,
         copy=False
     )
+
+    monto_ahorro = fields.Monetary(
+        string="Ahorro por convenio",
+        compute="_compute_monto_ahorro",
+        store=True,
+        currency_field="currency_id"
+    )
+
+    @api.depends(
+        "order_line.price_unit",
+        "order_line.product_uom_qty",
+        "order_line.discount",
+        "order_line.display_type"
+    )
+    def _compute_monto_ahorro(self):
+
+        for order in self:
+
+            total = 0
+
+            lineas = order.order_line.filtered(
+                lambda line: not line.display_type
+            )
+
+            for linea in lineas:
+                total += (
+                    linea.price_unit *
+                    linea.product_uom_qty *
+                    linea.discount / 100
+                )
+
+            order.monto_ahorro = total
+
+
+
+
 
     @api.depends("partner_id", "date_order")
     def _compute_convenio_id(self):
@@ -87,3 +123,7 @@ class SaleOrder(models.Model):
                     )
 
         return super().action_confirm()
+
+
+
+    
